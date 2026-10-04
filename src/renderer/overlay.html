@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:" />
+    <title>Sotto</title>
+    <link rel="stylesheet" href="overlay.css" />
+  </head>
+  <body>
+    <div id="root">
+      <div id="bar">
+        <div id="grip" title="Drag to move"><span class="dot"></span></div>
+        <select id="profile" title="Profile"></select>
+        <button id="listen" class="pill" title="Start or stop listening">Listen</button>
+        <input id="question" type="text" autocomplete="off" spellcheck="false" placeholder="Ask about your screen or the conversation" />
+        <label id="screenToggle" title="Send a screenshot with the question"><input id="useScreen" type="checkbox" checked /> Screen</label>
+        <button id="ask" class="pill primary">Ask</button>
+        <button id="more" class="icon" title="Transcript">&#9776;</button>
+        <button id="end" class="icon" title="End session and write notes">&#10003;</button>
+        <button id="dash" class="icon" title="Dashboard">&#9881;</button>
+        <button id="hide" class="icon" title="Hide">&#10005;</button>
+      </div>
+      <div id="chips"></div>
+      <div id="status" hidden></div>
+      <div id="answers"></div>
+      <div id="transcript" hidden>
+        <div class="section-title">Transcript</div>
+        <div id="lines"></div>
+      </div>
+      <div id="hints"></div>
+    </div>
+    <script src="../core/markdown.js"></script>
+    <script src="overlay.js"></script>
+  </body>
+</html>

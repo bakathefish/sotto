@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:" />
+    <title>Sotto</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <nav>
+      <div class="brand"><span class="dot"></span> Sotto <small id="version"></small></div>
+      <button class="tab active" data-tab="profiles">Profiles and knowledge</button>
+      <button class="tab" data-tab="sessions">Sessions</button>
+      <button class="tab" data-tab="settings">Settings</button>
+      <div id="saved" class="saved"></div>
+    </nav>
+
+    <main>
+      <section id="tab-profiles" class="split">
+        <aside>
+          <div class="row">
+            <button id="newProfile">New profile</button>
+            <button id="importPack">Import pack</button>
+          </div>
+          <div id="profileList" class="list"></div>
+        </aside>
+        <article id="profileDetail"></article>
+      </section>
+
+      <section id="tab-sessions" class="split" hidden>
+        <aside><div id="sessionList" class="list"></div></aside>
+        <article id="sessionDetail"><p class="muted">Sessions you end from the overlay are saved here with notes, the chat and the transcript.</p></article>
+      </section>
+
+      <section id="tab-settings" class="scroll" hidden>
+        <h2>Answers</h2>
+        <div class="grid">
+          <label>Provider
+            <select data-path="provider">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI-compatible (OpenAI, Groq, OpenRouter, Ollama)</option>
+            </select>
+          </label>
+          <div class="field"><span>Connection</span>
+            <div class="row"><button id="testLlm">Test connection</button><span id="testResult" class="muted"></span></div>
+          </div>
+        </div>
+        <h3>Anthropic</h3>
+        <div class="grid">
+          <label>API key <span class="keyrow"><input type="password" data-secret="anthropic" placeholder="sk-ant-..." /><button data-save-secret="anthropic">Save</button></span></label>
+          <label>Model <input type="text" data-path="anthropic.model" /></label>
+          <label>Fast model, for live suggestions <input type="text" data-path="anthropic.fastModel" /></label>
+          <label class="check"><input type="checkbox" data-path="anthropic.webSearch" /> Let Claude search the web</label>
+        </div>
+        <h3>OpenAI-compatible</h3>
+        <div class="grid">
+          <label>Base URL <input type="text" data-path="openai.baseUrl" /></label>
+          <label>API key, blank for a local server <span class="keyrow"><input type="password" data-secret="openai" /><button data-save-secret="openai">Save</button></span></label>
+          <label>Model <input type="text" data-path="openai.model" /></label>
+          <label>Fast model, for live suggestions <input type="text" data-path="openai.fastModel" /></label>
+        </div>
+
+        <h2>Listening</h2>
+        <div class="grid">
+          <label>Transcription
+            <select data-path="stt.provider">
+              <option value="off">Off</option>
+              <option value="deepgram">Deepgram (live streaming)</option>
+              <option value="openai">OpenAI-compatible Whisper (chunked)</option>
+            </select>
+          </label>
+          <label>Language code <input type="text" data-path="stt.language" /></label>
+          <label>Deepgram API key <span class="keyrow"><input type="password" data-secret="deepgram" /><button data-save-secret="deepgram">Save</button></span></label>
+          <label>Deepgram model <input type="text" data-path="stt.deepgramModel" /></label>
+          <label>Whisper base URL <input type="text" data-path="stt.openaiBaseUrl" /></label>
+          <label>Whisper model <input type="text" data-path="stt.openaiModel" /></label>
+          <label>Whisper API key, blank reuses the OpenAI key <span class="keyrow"><input type="password" data-secret="sttOpenai" /><button data-save-secret="sttOpenai">Save</button></span></label>
+          <label class="check"><input type="checkbox" data-path="autoSuggest" /> Suggest a reply when the other side asks a question</label>
+        </div>
+        <p id="encryption" class="muted"></p>
+
+        <h2>Behaviour</h2>
+        <div class="grid">
+          <label class="check"><input type="checkbox" data-path="includeScreenshot" /> Send a screenshot with each question</label>
+          <label>Longest answer, in tokens <input type="number" min="256" max="16000" step="128" data-path="maxTokens" /></label>
+          <label>Knowledge budget, in tokens <input type="number" min="2000" max="400000" step="1000" data-path="knowledgeBudgetTokens" /></label>
+        </div>
+        <label class="wide">Instructions added to every profile
+          <textarea rows="4" data-path="customInstructions" placeholder="For example: answer in short sentences. I am a student presenting my own project."></textarea>
+        </label>
+
+        <h2>Overlay</h2>
+        <div class="grid">
+          <label class="check"><input type="checkbox" data-path="overlay.contentProtection" /> Hide Sotto from screen sharing and recordings</label>
+          <label>Opacity <input type="range" min="0.4" max="1" step="0.02" data-path="overlay.opacity" /></label>
+          <label>Width, in pixels <input type="number" min="480" max="1400" step="20" data-path="overlay.width" /></label>
+        </div>
+
+        <h2>Shortcuts</h2>
+        <p class="muted">Electron accelerator format, for example CommandOrControl+Shift+L. They work from any app.</p>
+        <div id="shortcuts" class="grid"></div>
+        <p id="shortcutResult" class="warn"></p>
+      </section>
+    </main>
+
+    <dialog id="profileDialog">
+      <form method="dialog">
+        <h2 id="profileDialogTitle">New profile</h2>
+        <label>Name <input id="pdName" type="text" required /></label>
+        <label>Work type <select id="pdMode"></select></label>
+        <label>Description <input id="pdDescription" type="text" /></label>
+        <label>Instructions, blank uses the work type's built-in instructions
+          <textarea id="pdPrompt" rows="10"></textarea>
+        </label>
+        <div class="row end">
+          <button value="cancel">Cancel</button>
+          <button id="pdSave" value="save" class="primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="../core/markdown.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

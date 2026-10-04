@@ -1,0 +1,7 @@
+{
+  "name": "Example: weather station",
+  "mode": "hardware",
+  "description": "A made-up project that shows the pack format.",
+  "prompt": "This is a solar weather station built on a microcontroller. Pin assignments and limits in 02_numbers.md are the only ones to quote. If I ask about a part that is not listed, say it is not in my files.",
+  "files": ["01_overview.md", "02_numbers.md"]
+}

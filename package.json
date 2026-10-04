@@ -1,0 +1,45 @@
+{
+  "name": "sotto",
+  "version": "0.1.0",
+  "description": "Open-source desktop overlay assistant: sees your screen, hears your meetings, answers from your own files.",
+  "main": "src/main/main.js",
+  "author": "bakathefish",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bakathefish/sotto.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/*.test.js\"",
+    "smoke": "node test/smoke/run.js",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "mammoth": "^1.13.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "dev.bakathefish.sotto",
+    "productName": "Sotto",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+test/smoke/out/
+
+# Never commit keys, settings or personal packs.
+.env
+.env.*
+secrets.json
+settings.json
+packs/
+*.local.*
+
+# Local tooling state.
+.planning/
