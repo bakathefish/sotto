@@ -37,7 +37,15 @@ class DeepgramStream {
       const alt = msg.channel && msg.channel.alternatives && msg.channel.alternatives[0];
       if (alt && alt.transcript) this.onResult({ text: alt.transcript, final: Boolean(msg.is_final) });
     };
-    this.ws.onerror = () => this.onError(new Error('Deepgram connection failed. Check the API key and network.'));
+    // A refused key or a dropped socket ends the stream, so report it once as fatal.
+    const fail = (message) => {
+      if (this.done) return;
+      this.done = true;
+      clearInterval(this.keepAlive);
+      this.onError(Object.assign(new Error(message), { fatal: true }));
+    };
+    this.ws.onerror = () => fail('Deepgram connection failed. Check the API key and network.');
+    this.ws.onclose = () => fail('Deepgram connection closed. Listening stopped.');
     this.keepAlive = setInterval(() => {
       if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: 'KeepAlive' }));
     }, 8000);
@@ -49,6 +57,7 @@ class DeepgramStream {
   }
 
   close() {
+    this.done = true;
     clearInterval(this.keepAlive);
     try {
       if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: 'CloseStream' }));

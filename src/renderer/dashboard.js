@@ -252,7 +252,10 @@ function openProfileDialog(profile) {
   $('pdName').value = profile ? profile.name : '';
   $('pdMode').value = profile ? profile.mode : 'general';
   $('pdDescription').value = profile ? profile.description || '' : '';
-  $('pdPrompt').value = profile ? profile.prompt : '';
+  // Leave the box blank when the profile only uses its work type's built-in
+  // instructions, so changing the work type picks up the new type's instructions.
+  const base = profile && data.profiles.find((p) => p.builtin && p.mode === profile.mode);
+  $('pdPrompt').value = profile && !(base && base.prompt === profile.prompt) ? profile.prompt : '';
   $('profileDialog').showModal();
 }
 

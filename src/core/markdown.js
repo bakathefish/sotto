@@ -33,7 +33,8 @@
   }
 
   function render(markdown) {
-    const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+    // Split on every character a regex "." stops at, so no line can fail to match below.
+    const lines = String(markdown || '').split(/\r\n|[\n\r\u2028\u2029]/);
     const html = [];
     let i = 0;
 
@@ -91,6 +92,7 @@
       while (i < lines.length && lines[i].trim() !== '' && !/^(```|#{1,6}\s|\s*([-*]|\d+[.)])\s+)/.test(lines[i])) {
         para.push(lines[i++]);
       }
+      if (para.length === 0) para.push(lines[i++]); // always move forward
       html.push(`<p>${para.map(inline).join('<br>')}</p>`);
     }
     return html.join('\n');

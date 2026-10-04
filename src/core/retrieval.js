@@ -14,7 +14,7 @@ function estimateTokens(text) {
 }
 
 function tokenize(text) {
-  const words = text.toLowerCase().match(/[a-z0-9][a-z0-9_.-]*[a-z0-9]|[a-z0-9]/g) || [];
+  const words = text.toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}_.-]*[\p{L}\p{N}]|[\p{L}\p{N}]/gu) || [];
   return words.filter((w) => !STOPWORDS.has(w));
 }
 
@@ -102,7 +102,11 @@ function buildContext(files, query, budgetTokens = 60000) {
     return { text, mode: 'full', files: usable.map((f) => f.name) };
   }
 
-  const hits = search(buildIndex(usable), query || '', 400);
+  const index = buildIndex(usable);
+  let hits = search(index, query || '', 400);
+  // Nothing matched (an empty or very general question): send the files from
+  // the top rather than nothing at all.
+  if (hits.length === 0) hits = index.docs.map((doc) => ({ doc }));
   const picked = [];
   let used = 0;
   for (const { doc } of hits) {

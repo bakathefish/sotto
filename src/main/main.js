@@ -94,6 +94,8 @@ function lockDownNavigation(win) {
 
 // ---------------------------------------------------------------- windows
 
+let quitting = false;
+
 function createOverlay() {
   const settings = store.get();
   const area = screen.getPrimaryDisplay().workArea;
@@ -124,6 +126,12 @@ function createOverlay() {
   overlay.once('ready-to-show', () => {
     overlay.showInactive();
     if (SMOKE) runSmoke();
+  });
+  // Alt+F4 hides the overlay instead of destroying it, so the hotkey and tray can bring it back.
+  overlay.on('close', (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    overlay.hide();
   });
   overlay.on('closed', () => {
     overlay = null;
@@ -266,7 +274,8 @@ async function ask({ question = '', actionId = '', useScreen = true }) {
   sendOverlay('answer:start', { id, kind: 'answer', label });
   try {
     const transcriptText = transcript.recentText();
-    const system = await buildSystem(`${question}\n${actionId}\n${transcriptText.slice(-1500)}`);
+    const action = ACTIONS[actionId];
+    const system = await buildSystem(`${question}\n${action ? `${action.label} ${action.prompt}` : ''}\n${transcriptText.slice(-1500)}`);
     const imageBase64 = useScreen && settings.includeScreenshot ? await captureScreen() : null;
     const text = buildUserText({ question, actionId, transcriptText, hasScreenshot: Boolean(imageBase64) });
     const history = chat.slice(-12).map((t) => ({ role: t.role, text: t.text }));
@@ -278,7 +287,8 @@ async function ask({ question = '', actionId = '', useScreen = true }) {
       signal: controller.signal,
       onText: (piece) => sendOverlay('answer:delta', { id, text: piece }),
     });
-    chat.push({ role: 'user', text: label, ts: Date.now() }, { role: 'assistant', text: full, ts: Date.now() });
+    // An empty reply is not kept: an empty turn would make the next request invalid.
+    if (full.trim()) chat.push({ role: 'user', text: label, ts: Date.now() }, { role: 'assistant', text: full, ts: Date.now() });
     sendOverlay('answer:done', { id });
     return full;
   } catch (err) {
@@ -309,7 +319,7 @@ async function suggest(utterance) {
       signal: controller.signal,
       onText: (piece) => sendOverlay('answer:delta', { id, text: piece }),
     });
-    chat.push({ role: 'user', text: `They asked: ${utterance}`, ts: Date.now() }, { role: 'assistant', text: full, ts: Date.now() });
+    if (full.trim()) chat.push({ role: 'user', text: `They asked: ${utterance}`, ts: Date.now() }, { role: 'assistant', text: full, ts: Date.now() });
     sendOverlay('answer:done', { id });
   } catch (err) {
     if (controller.signal.aborted) sendOverlay('answer:done', { id, cancelled: true });
@@ -344,7 +354,14 @@ function startListening() {
     openai: store.getSecret('openai'),
     sttOpenai: store.getSecret('sttOpenai'),
   };
-  const onError = (err) => sendOverlay('toast', { message: err.message });
+  const onError = (err) => {
+    sendOverlay('toast', { message: err.message });
+    // A dead connection cannot transcribe, so stop instead of looking live.
+    if (err.fatal && sttStreams) {
+      stopListening();
+      sendOverlay('stop-audio');
+    }
+  };
   try {
     sttStreams = {
       me: createStream({ settings, secrets, onResult: (r) => onSpeech('me', r), onError }),
@@ -462,9 +479,13 @@ function saveUserProfile({ id, name, mode, prompt, description }) {
   if (!name || !name.trim()) throw new Error('A profile needs a name');
   const base = BUILTIN_PROFILES.find((p) => p.mode === mode) || BUILTIN_PROFILES[0];
   const existing = store.get().userProfiles.find((p) => p.id === id);
+  // A new profile never replaces one that happens to share its name.
+  const taken = new Set(profiles().map((p) => p.id));
+  let newId = 'user-' + slugify(name);
+  for (let n = 2; taken.has(newId); n++) newId = `user-${slugify(name)}-${n}`;
   const profile = {
     ...(existing || {}),
-    id: existing ? existing.id : 'user-' + slugify(name),
+    id: existing ? existing.id : newId,
     name: name.trim(),
     mode: base.mode,
     description: description || '',
@@ -587,6 +608,7 @@ function registerIpc() {
   handle('sessions:delete', ({ id }) => sessions.remove(id));
   handle('sessions:export', async ({ id }) => {
     const record = sessions.get(id);
+    if (!record) return { saved: false };
     const result = await dialog.showSaveDialog(dashboard, {
       title: 'Export session',
       defaultPath: slugify(record.title) + '.md',
@@ -768,6 +790,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on('before-quit', () => {
+    quitting = true;
     // Keep unsaved work: store the session without notes.
     if (!SMOKE && sessions && (!transcript.isEmpty() || chat.length > 0)) {
       sessions.save({

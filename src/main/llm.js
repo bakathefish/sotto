@@ -36,12 +36,15 @@ function openaiRequest({ settings, apiKey, system, messages, fast }) {
   const cfg = settings.openai;
   const headers = { 'content-type': 'application/json' };
   if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+  const model = fast ? cfg.fastModel : cfg.model;
+  // OpenAI's reasoning and gpt-5 models reject max_tokens; everything else expects it.
+  const limitField = /^(o\d|gpt-5)/.test(model) ? 'max_completion_tokens' : 'max_tokens';
   return {
     url: cfg.baseUrl.replace(/\/+$/, '') + '/chat/completions',
     headers,
     body: {
-      model: fast ? cfg.fastModel : cfg.model,
-      max_tokens: settings.maxTokens,
+      model,
+      [limitField]: settings.maxTokens,
       stream: true,
       messages: [{ role: 'system', content: system }].concat(
         messages.map((m) => ({

@@ -48,10 +48,10 @@ test('knowledge: reads the text of a PDF', async () => {
 
 test('knowledge: reads the text of a Word file', async () => {
   const file = path.join(tmpDir(), 'notes.docx');
-  fs.writeFileSync(file, await makeDocx(['Sample size is 151 sources.', 'Second paragraph.']));
+  fs.writeFileSync(file, await makeDocx(['Sample size is 60 sources.', 'Second paragraph.']));
   const result = await readKnowledgeFile(file);
   assert.equal(result.error, undefined);
-  assert.match(result.text, /Sample size is 151 sources\./);
+  assert.match(result.text, /Sample size is 60 sources\./);
   assert.match(result.text, /Second paragraph\./);
 });
 

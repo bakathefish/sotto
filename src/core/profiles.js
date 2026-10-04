@@ -117,7 +117,7 @@ const BUILTIN_PROFILES = [
     autoSuggest: true,
     prompt:
       'I am doing or presenting research. Precision matters more than fluency.\n' +
-      'Always give a count with its denominator ("107 of 151"), never a bare percentage.\n' +
+      'Always give a count with its denominator ("41 of 60"), never a bare percentage.\n' +
       'Separate three things and never blur them: what my files show, what the published literature says, and what is a guess.\n' +
       'When a question touches a limit of the work, state the limit. An honest limit is a better answer than a strong claim.\n' +
       'Do not turn "not significant" into "no difference", a candidate into a discovery, or a ranking score into a probability.\n' +
@@ -187,7 +187,7 @@ const BUILTIN_PROFILES = [
 function slugify(name) {
   return String(name || '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '') || 'profile';
 }
 
@@ -198,7 +198,7 @@ function parsePack(json, folder) {
   const mode = MODES.includes(json.mode) ? json.mode : 'general';
   const files = Array.isArray(json.files) ? json.files.filter((f) => typeof f === 'string') : [];
   for (const f of files) {
-    if (f.includes('..') || /^[\\/]|^[a-zA-Z]:/.test(f)) throw new Error(`Pack file path must be relative: ${f}`);
+    if (f.split(/[\\/]/).includes('..') || /^[\\/]|^[a-zA-Z]:/.test(f)) throw new Error(`Pack file path must be relative: ${f}`);
   }
   return {
     id: 'pack-' + slugify(json.name),

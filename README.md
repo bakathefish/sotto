@@ -28,7 +28,7 @@ An open-source desktop assistant that floats over your screen. It can see what y
 
 ## Install and run
 
-You need [Node.js](https://nodejs.org) 20 or newer.
+You need [Node.js](https://nodejs.org) 22 or newer.
 
 ```
 git clone https://github.com/bakathefish/sotto.git
@@ -51,13 +51,15 @@ Sotto has no account and no server. You paste your own keys into the dashboard.
 | OpenAI-compatible | Answers with OpenAI, Groq, OpenRouter. Not needed for a local Ollama. | Your provider |
 | Deepgram | Live streaming transcription | console.deepgram.com |
 
-Keys are encrypted with the operating system keychain (Electron `safeStorage`) and kept in the app's settings folder. The window code never receives a key back, only whether one is saved.
+Keys are encrypted with the operating system keychain (Electron `safeStorage`) and kept in the app's settings folder. On a system with no keychain (some Linux setups) they are stored unencrypted, and the dashboard says so. The window code never receives a key back, only whether one is saved.
 
 To run fully local, choose the OpenAI-compatible provider, set the base URL to `http://localhost:11434/v1`, pick a vision model you have pulled in Ollama, and leave the key blank.
 
 ## Shortcuts
 
 All of them work from any app and can be changed in the dashboard. `Ctrl` is `Cmd` on macOS.
+
+While Sotto runs, these keys go to Sotto and not to the app in front. If one clashes with something you use (`Ctrl+Enter` to send a message, `Ctrl+Shift+P` in an editor), change it in the dashboard.
 
 | Shortcut | Action |
 | --- | --- |

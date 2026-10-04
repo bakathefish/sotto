@@ -88,12 +88,12 @@ test('retrieval: small knowledge goes in whole, large knowledge is retrieved wit
 
   const filler = Array.from({ length: 200 }, (_, i) => `Paragraph ${i} about weather and oceans and tides.`).join('\n\n');
   const big = buildContext(
-    [{ name: 'big.md', text: filler + '\n\nThe rockoon ignites at altitude from a balloon.' }],
-    'when does the rockoon ignite',
+    [{ name: 'big.md', text: filler + '\n\nThe kiln fires at cone six overnight.' }],
+    'when does the kiln fire',
     300
   );
   assert.equal(big.mode, 'retrieved');
-  assert.ok(big.text.includes('rockoon ignites'));
+  assert.ok(big.text.includes('kiln fires'));
   assert.ok(estimateTokens(big.text) <= 400);
 
   assert.equal(buildContext([], 'q').mode, 'none');
@@ -199,6 +199,34 @@ test('profiles: rejects bad packs and paths that escape the folder', () => {
   assert.throws(() => parsePack({ name: 'A', files: ['C:\\secret.md'] }, 'x'), /relative/);
   assert.equal(parsePack({ name: 'A', mode: 'nonsense' }, 'x').mode, 'general');
   assert.equal(slugify('  My Project! '), 'my-project');
+  assert.equal(slugify('Физика 2'), 'физика-2');
+  assert.equal(slugify('!!!'), 'profile');
+  assert.deepEqual(parsePack({ name: 'A', files: ['notes..final.md'] }, 'x').packFiles, ['notes..final.md']);
+});
+
+test('markdown: odd line breaks inside a heading do not hang the renderer', () => {
+  assert.match(render('# a\u2028b'), /<h3>a<\/h3>/);
+  assert.match(render('# a\rb'), /<p>b<\/p>/);
+  assert.match(render('#\u2028'), /<p>#<\/p>/);
+});
+
+test('retrieval: a question that matches nothing still sends the top of the files', () => {
+  const filler = Array.from({ length: 400 }, (_, i) => `Paragraph ${i} about soil and watering.`).join('\n\n');
+  const context = buildContext([{ name: 'garden.md', text: filler }], 'zzz', 1500);
+  assert.equal(context.mode, 'retrieved');
+  assert.ok(context.text.includes('Paragraph 0 about soil'));
+  const cyrillic = buildContext([{ name: 'a.md', text: `${filler}\n\nПредел батареи 4.2 В.` }], 'предел батареи', 1500);
+  assert.ok(cyrillic.text.includes('Предел батареи'));
+});
+
+test('llm: newer OpenAI models get max_completion_tokens, others max_tokens', () => {
+  const { buildRequest } = require('../src/main/llm');
+  const settings = (model) => ({ provider: 'openai', maxTokens: 500, openai: { baseUrl: 'http://x/v1', model, fastModel: model } });
+  const args = { apiKey: '', system: 's', messages: [{ role: 'user', text: 'hi' }] };
+  assert.equal(buildRequest({ ...args, settings: settings('gpt-4o') }).body.max_tokens, 500);
+  const newer = buildRequest({ ...args, settings: settings('gpt-5-mini') }).body;
+  assert.equal(newer.max_completion_tokens, 500);
+  assert.equal(newer.max_tokens, undefined);
 });
 
 test('prompts: system prompt is ordered stable-first and labels partial knowledge', () => {
