@@ -116,7 +116,7 @@ In the dashboard, **Import pack** accepts one pack folder or a folder full of pa
 
 ## How it is built
 
-Electron, plain JavaScript, no bundler and no framework. Two runtime dependencies, both for reading documents (`pdf-parse`, `mammoth`).
+Electron, plain JavaScript, no bundler and no framework. Two direct runtime dependencies, both for reading documents (`pdf-parse`, `mammoth`).
 
 ```
 src/core       Pure logic with no Electron in it: prompts, profiles, retrieval,

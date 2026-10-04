@@ -51,7 +51,9 @@ function startMock() {
 
 function runApp(env) {
   return new Promise((resolve, reject) => {
-    const child = spawn(require('electron'), ['.'], { cwd: ROOT, env: { ...process.env, ...env }, stdio: 'inherit' });
+    // SOTTO_SMOKE_EXE runs a packaged build instead of the source tree.
+    const exe = process.env.SOTTO_SMOKE_EXE;
+    const child = spawn(exe || require('electron'), exe ? [] : ['.'], { cwd: ROOT, env: { ...process.env, ...env }, stdio: 'inherit' });
     const timer = setTimeout(() => {
       child.kill();
       reject(new Error('The app did not finish within 90 seconds'));
@@ -75,8 +77,9 @@ async function main() {
 
   fs.writeFileSync(
     path.join(packs, 'smoke', 'sotto-pack.json'),
-    JSON.stringify({ name: 'Smoke project', mode: 'research', description: 'Test pack', prompt: 'Quote facts.md exactly.', files: ['facts.md'] })
+    JSON.stringify({ name: 'Smoke project', mode: 'research', description: 'Test pack', prompt: 'Quote facts.md exactly.', files: ['facts.md', 'sample.pdf'] })
   );
+  fs.copyFileSync(path.join(__dirname, '..', 'fixtures', 'sample.pdf'), path.join(packs, 'smoke', 'sample.pdf'));
   fs.writeFileSync(path.join(packs, 'smoke', 'facts.md'), '# Facts\n\nThe magic number is 4417.\n');
 
   const server = await startMock();
@@ -109,11 +112,23 @@ async function main() {
   assert.ok(result.audioFrames.me + result.audioFrames.them > 0, 'audio frames arrived');
   console.log(`audio frames in 2.5 s: microphone ${result.audioFrames.me}, system audio ${result.audioFrames.them}`);
 
+  // Hotkeys, tray, click-through and profile cycling.
+  console.log(`shortcuts registered: ${result.registeredShortcuts} of 12${result.failedShortcuts.length ? ', taken by another app: ' + result.failedShortcuts.join(', ') : ''}`);
+  assert.ok(result.registeredShortcuts >= 10, 'global shortcuts registered');
+  assert.equal(result.tray, true, 'tray icon created');
+  assert.equal(result.clickThroughShown, true, 'click-through reaches the overlay');
+  assert.equal(result.profileAfterCycle, 'general', 'next-profile wraps from the last profile to the first');
+
+  // With content protection on, the overlay is missing from a screen capture.
+  console.log(`screen pixels that changed when protection was turned on: ${(result.captureChangedFraction * 100).toFixed(1)}%`);
+  if (process.platform === 'win32') assert.ok(result.captureChangedFraction > 0.05, 'the overlay disappears from screen capture');
+
   // The request carried the profile, the pack file and a screenshot.
   const ask = requests[0];
   assert.equal(ask.model, 'mock');
   assert.equal(ask.stream, true);
   assert.match(ask.messages[0].content, /The magic number is 4417\./, 'knowledge file is in the system prompt');
+  assert.match(ask.messages[0].content, /The battery limit is 4\.2 V/, 'PDF text is in the system prompt');
   assert.match(ask.messages[0].content, /Quote facts\.md exactly\./, 'pack instructions are in the system prompt');
   const user = ask.messages[ask.messages.length - 1];
   assert.equal(user.content[0].text.includes('What is the magic number?'), true);

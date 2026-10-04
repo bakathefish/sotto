@@ -14,8 +14,14 @@ const cache = new Map(); // path -> { mtimeMs, text }
 async function extractText(file) {
   const ext = path.extname(file).toLowerCase();
   if (ext === '.pdf') {
-    const pdfParse = require('pdf-parse/lib/pdf-parse.js');
-    return (await pdfParse(fs.readFileSync(file))).text;
+    const { PDFParse } = require('pdf-parse');
+    const parser = new PDFParse({ data: fs.readFileSync(file) });
+    try {
+      // Drop the "-- 1 of 9 --" markers the parser puts between pages.
+      return (await parser.getText()).text.replace(/\n*-- \d+ of \d+ --\n*/g, '\n\n').trim();
+    } finally {
+      await parser.destroy();
+    }
   }
   if (ext === '.docx') {
     const mammoth = require('mammoth');

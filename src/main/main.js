@@ -671,6 +671,46 @@ async function runSmoke() {
     await overlay.webContents.executeJavaScript('toggleListen()', true);
     result.listeningAfterStop = Boolean(sttStreams);
 
+    // Capture hiding: grab the screen with protection off and on, and compare
+    // the part of the screen where the overlay sits.
+    const overlayOnScreen = async (name) => {
+      const image = nativeImage.createFromBuffer(Buffer.from(await captureScreen(), 'base64'));
+      const b = overlay.getBounds();
+      const display = screen.getDisplayMatching(b);
+      const k = image.getSize().width / display.size.width;
+      const crop = image.crop({
+        x: Math.round((b.x - display.bounds.x) * k),
+        y: Math.round((b.y - display.bounds.y) * k),
+        width: Math.round(b.width * k),
+        height: Math.round(b.height * k),
+      });
+      fs.writeFileSync(path.join(outDir, name), crop.toPNG());
+      return crop.toBitmap();
+    };
+    const visible = await overlayOnScreen('screen-unprotected.png');
+    overlay.setContentProtection(true);
+    await wait(700);
+    const hidden = await overlayOnScreen('screen-protected.png');
+    overlay.setContentProtection(false);
+    await wait(300);
+    let changed = 0;
+    for (let i = 0; i < visible.length; i += 4) {
+      if (Math.abs(visible[i] - hidden[i]) + Math.abs(visible[i + 1] - hidden[i + 1]) + Math.abs(visible[i + 2] - hidden[i + 2]) > 60) changed++;
+    }
+    result.captureChangedFraction = changed / (visible.length / 4);
+
+    // Hotkeys, tray and click-through.
+    result.failedShortcuts = registerShortcuts();
+    result.registeredShortcuts = Object.values(store.get().shortcuts).filter((a) => globalShortcut.isRegistered(a)).length;
+    result.tray = Boolean(tray);
+    setClickThrough(true);
+    await wait(200);
+    result.clickThroughShown = await overlay.webContents.executeJavaScript('document.body.classList.contains("click-through")');
+    setClickThrough(false);
+    cycleProfile();
+    result.profileAfterCycle = store.get().activeProfile;
+    setProfile('pack-smoke-project');
+
     transcript.add({ speaker: 'them', text: 'How does the mock work?' });
     transcript.add({ speaker: 'me', text: 'It streams a fixed reply.', ts: Date.now() + 5000 });
     const saved = await endSession({ withNotes: true });
